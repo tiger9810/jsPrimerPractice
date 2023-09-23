@@ -1,47 +1,63 @@
-function fetchUserInfo(userId) {
-    fetch(`https://api.github.com/users/${encodeURIComponent(userId)}`)
+async function main() {
+    try {
+        const movieName = getMovieName();
+        const movieInfo = await fetchMovieInfo(movieName);
+        // console.log(Object.keys(movieInfo));
+        // console.log(movieInfo.Error)
+        if(movieInfo.Error === 'Movie not found!') {
+            const view = errorView(movieInfo);
+            displayView(view);
+        } else {
+            const view = createView(movieInfo);
+            displayView(view);}
+    } catch (err) {
+        console.error(err);
+    }
+
+}
+
+function fetchMovieInfo(movieName) {
+    return fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(movieName)}&apikey=4a3b711b`)
         .then(response => {
             if (!response.ok) {
-                console.error("エラーレスポンス", response);
+                return Promise.reject(new Error(`${response.status}: ${response.statusText}`));
             } else {
-                return response.json().then(userInfo => {
-                    // HTMLの組み立て
-                    const view = escapeHTML`
-                    <h4>${userInfo.name} (@${userInfo.login})</h4>
-                    <img src="${userInfo.avatar_url}" alt="${userInfo.login}" height="100">
-                    <dl>
-                        <dt>Location</dt>
-                        <dd>${userInfo.location}</dd>
-                        <dt>Repositories</dt>
-                        <dd>${userInfo.public_repos}</dd>
-                    </dl>
-                    `;
-                    // HTMLの挿入
-                    const result = document.getElementById("result");
-                    result.innerHTML = view;
-                });
+                // jsonオブジェクトで解決するpromiseを返す
+                return response.json();
             }
-        }).catch(error => {
-            console.error(error);
         });
+    }
+
+function getMovieName() {
+    const input = document.getElementById('movieName');
+    return input.value;
 }
 
-function escapeSpecialChars(str) {
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+function createView(movieData) {
+    let resultHTML = '<div>';
 
-function escapeHTML(strings, ...values) {
-    return strings.reduce((result, str, i) => {
-        const value = values[i - 1];
-        if (typeof value === "string") {
-            return result + escapeSpecialChars(value) + str;
-        } else {
-            return result + String(value) + str;
+    for (let i = 0; i < 10; i++) {
+        if (movieData.Search[i]) {
+            resultHTML += `
+                <div>
+                    <h1>Search result ${i + 1} for: ${movieData.Search[i].Title}</h1>
+                    <img src="${movieData.Search[i].Poster}" />
+                    <p>${movieData.Search[i].Year}</p>
+                </div>
+            `;
         }
-    });
+    }
+
+    resultHTML += '</div>';
+    return resultHTML;
+}
+
+function errorView(error) {
+    return `<h1>Sorry, ${error.Error}</h1>`;
+}
+
+
+function displayView(view) {
+    const result = document.getElementById('result');
+    result.innerHTML = view;
 }
